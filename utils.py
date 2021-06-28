@@ -128,7 +128,7 @@ class ProgressBar:
         if msg is not None:
             sys.stdout.write(msg + '\r')
 
-    def update(self, msg=None):
+    def update(self,bidx, msg=None):
         self.count += 1
         time_elapsed = time.time() - self.time_begin
         logs = []
@@ -143,8 +143,9 @@ class ProgressBar:
             logs.append('\r')
         else:
             logs.append('\n')
-        sys.stdout.write(''.join(logs))
-        sys.stdout.flush()
+        if bidx % 100 == 0 or bidx ==390:
+            sys.stdout.write(''.join(logs))
+            sys.stdout.flush()
 
 
 def format_time(seconds):
