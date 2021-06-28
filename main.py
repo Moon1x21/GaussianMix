@@ -13,7 +13,7 @@ import models
 import utils
 #만약 medium이면 import trainers_max
 import trainers_max as trainers
-import 
+import datetime
 
 
 def main():
@@ -86,7 +86,7 @@ def main():
     filetime = filetime[0]+'_'+filetime[1]
 
     post = args.postfix + filetime 
-    
+
     savefilename_prefix = 'checkpoint/{model}-{depth}{params}_{dataset}{postfix}'.format(
         model=args.model,
         depth=args.depth,
