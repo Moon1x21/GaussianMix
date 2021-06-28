@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 import numpy as np
 import utils
-
+import cv2
 
 class Trainer(nn.Module):
     def __init__(self, network, dataloaders, optimizer, use_cuda=False):
@@ -60,7 +60,7 @@ class Trainer(nn.Module):
             sample_error5 += batchsize - result
             err5 = float(1. * sample_error5 / sample_total)
 
-            progress.update(
+            progress.update(batch_idx,
                 '{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
                     'train' if train else ' test', loss, 100 * err,
                     int(sample_error), int(sample_total), 100 * err5,
@@ -144,12 +144,12 @@ class TrainerRICAP(Trainer):
         self.optimizer.step()
         return outputs, loss_batch
 
-    def find_nearest(array, value,W,w_,H,h_):
+    def find_nearest(self,array, value,W,w_,H,h_):
         array = array[:W-w_+1,:H-h_+1]
         idx = np.unravel_index((np.abs(array- value)).argmin(),array.shape)
         return idx
 
-    def saliency_bbox(img,w_,h_):
+    def saliency_bbox(self,img,w_,h_):
         size = img.size()
         W = size[1]
         H = size[2]
