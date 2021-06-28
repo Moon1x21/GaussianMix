@@ -59,9 +59,8 @@ class Trainer(nn.Module):
             result = result.sum().item()
             sample_error5 += batchsize - result
             err5 = float(1. * sample_error5 / sample_total)
-
             progress.update(
-                '{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
+                bidx=batch_idx,msg='{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
                     'train' if train else ' test', loss, 100 * err,
                     int(sample_error), int(sample_total), 100 * err5,
                     int(sample_error5), int(sample_total), lr))
@@ -115,8 +114,9 @@ class TrainerRICAP(Trainer):
         W_ = {}
         for k in range(4):
             index = self.cuda(torch.randperm(images.size(0)))
-            bbx1, bby1, bbx2, bby2 = self.saliency_bbox(images[index[0]],w_[k],h_[k])
-            cropped_images[k] = images[index][:,:,bbx1:bbx2,bby1:bby2]
+            x_k = np.random.randint(0, I_x - w_[k] + 1)
+            y_k = np.random.randint(0, I_y - h_[k] + 1)
+            cropped_images[k] = images[index][:, :, x_k:x_k + w_[k], y_k:y_k + h_[k]]
             c_[k] = targets[index]
             W_[k] = (w_[k] * h_[k]) / (I_x * I_y)
 
@@ -143,37 +143,6 @@ class TrainerRICAP(Trainer):
         loss_batch.backward()
         self.optimizer.step()
         return outputs, loss_batch
-
-    def find_nearest(array, value,W,w_,H,h_):
-        array = array[:W-w_+1,:H-h_+1]
-        idx = np.unravel_index((np.abs(array- value)).argmin(),array.shape)
-        return idx
-
-    def saliency_bbox(img,w_,h_):
-        size = img.size()
-        W = size[1]
-        H = size[2]
-
-        # initialize OpenCV's static fine grained saliency detector and
-        # compute the saliency map
-        temp_img = img.cpu().numpy().transpose(1, 2, 0)
-        saliency = cv2.saliency.StaticSaliencyFineGrained_create()
-        (success, saliencyMap) = saliency.computeSaliency(temp_img)
-        saliencyMap = (saliencyMap * 255).astype("uint8")
-        idx = self.find_nearest(saliencyMap,np.median(saliencyMap, axis=None),W,w_,H,h_)
-
-        median_indices = idx
-        x = median_indices[0]
-        y = median_indices[1]
-
-        bbx1 = x 
-        bby1 = y 
-        bbx2 = x + w_
-        bby2 = y + h_
-
-        return bbx1, bby1, bbx2, bby2
-
-
 
 
 def make_trainer(network, dataloaders, optimizer, use_cuda, beta_of_ricap=0.0):
