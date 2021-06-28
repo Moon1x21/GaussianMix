@@ -161,8 +161,8 @@ class TrainerRICAP(Trainer):
         saliency = cv2.saliency.StaticSaliencyFineGrained_create()
         (success, saliencyMap) = saliency.computeSaliency(temp_img)
         saliencyMap = (saliencyMap * 255).astype("uint8")
+        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
 
-        maximum_indices = np.unravel_index(np.argmax(saliencyMap,axis=None),saliencyMap.shape)
         x = maximum_indices[0]
         y = maximum_indices[1]
 

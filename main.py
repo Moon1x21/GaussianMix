@@ -11,7 +11,9 @@ import argparse
 
 import models
 import utils
-import trainers
+#만약 medium이면 import trainers_max
+import trainers_max as trainers
+import 
 
 
 def main():
@@ -78,12 +80,19 @@ def main():
 
     # prepare log saving file name
     # save target : model information (.dat), result (.log), model parameters (.pth), optimizer parameters (.opt)
+    
+    filetime = datetime.datetime.today()
+    filetime = str(filetime).split(' ')
+    filetime = filetime[0]+'_'+filetime[1]
+
+    post = args.postfix + filetime 
+    
     savefilename_prefix = 'checkpoint/{model}-{depth}{params}_{dataset}{postfix}'.format(
         model=args.model,
         depth=args.depth,
         params='-{}'.format(args.params) if args.params is not None else '',
         dataset=args.dataset,
-        postfix='_{}'.format(args.postfix) if args.postfix != '' else '',
+        postfix='_{}'.format(post) if args.postfix != '' else '',
     )
 
     # define learning rate strategy
