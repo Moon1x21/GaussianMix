@@ -143,7 +143,7 @@ class ProgressBar:
             logs.append('\r')
         else:
             logs.append('\n')
-        if bidx % 100 == 0 or bidx ==391:
+        if bidx % 100 == 0 or bidx ==390:
             sys.stdout.write(''.join(logs))
             sys.stdout.flush()
 
