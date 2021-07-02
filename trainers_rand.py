@@ -8,6 +8,8 @@ import numpy as np
 import utils
 import cv2
 
+import random
+
 class Trainer(nn.Module):
     def __init__(self, network, dataloaders, optimizer, use_cuda=False):
         super(Trainer, self).__init__()
@@ -59,14 +61,9 @@ class Trainer(nn.Module):
             result = result.sum().item()
             sample_error5 += batchsize - result
             err5 = float(1. * sample_error5 / sample_total)
-<<<<<<< HEAD
-            progress.update(
-                bidx=batch_idx,msg='{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
-=======
 
             progress.update(batch_idx,
                 '{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
->>>>>>> origin/master
                     'train' if train else ' test', loss, 100 * err,
                     int(sample_error), int(sample_total), 100 * err5,
                     int(sample_error5), int(sample_total), lr))
@@ -130,7 +127,6 @@ class TrainerRICAP(Trainer):
             (torch.cat((cropped_images[0], cropped_images[1]), 2),
              torch.cat((cropped_images[2], cropped_images[3]), 2)),
             3)
-
         targets = (c_, W_)
         return patched_images, targets
 
@@ -164,12 +160,20 @@ class TrainerRICAP(Trainer):
         temp_img = img.cpu().numpy().transpose(1, 2, 0)
         saliency = cv2.saliency.StaticSaliencyFineGrained_create()
         (success, saliencyMap) = saliency.computeSaliency(temp_img)
+        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
         saliencyMap = (saliencyMap * 255).astype("uint8")
-        idx = self.find_nearest(saliencyMap,np.median(saliencyMap, axis=None),W,w_,H,h_)
 
-        median_indices = idx
-        x = median_indices[0]
-        y = median_indices[1]
+        maxV = np.max(saliencyMap,axis=None)
+        midV = np.median(saliencyMap, axis=None)
+
+        rV = random.randrange(int(midV),int(maxV)+1)
+        
+        idx = self.find_nearest(saliencyMap,rV,W,w_,H,h_)
+
+        random_indices = idx
+
+        x = random_indices[0]
+        y = random_indices[1]
 
         bbx1 = x 
         bby1 = y 

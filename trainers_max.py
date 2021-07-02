@@ -115,9 +115,8 @@ class TrainerRICAP(Trainer):
         W_ = {}
         for k in range(4):
             index = self.cuda(torch.randperm(images.size(0)))
-            x_k = np.random.randint(0, I_x - w_[k] + 1)
-            y_k = np.random.randint(0, I_y - h_[k] + 1)
-            cropped_images[k] = images[index][:, :, x_k:x_k + w_[k], y_k:y_k + h_[k]]
+            bbx1, bby1, bbx2, bby2 = self.saliency_bbox(images[index[0]],w_[k],h_[k])
+            cropped_images[k] = images[index][:,:,bbx1:bbx2,bby1:bby2]
             c_[k] = targets[index]
             W_[k] = (w_[k] * h_[k]) / (I_x * I_y)
 
@@ -126,7 +125,6 @@ class TrainerRICAP(Trainer):
             (torch.cat((cropped_images[0], cropped_images[1]), 2),
              torch.cat((cropped_images[2], cropped_images[3]), 2)),
             3)
-
         targets = (c_, W_)
         return patched_images, targets
 
@@ -160,9 +158,11 @@ class TrainerRICAP(Trainer):
         temp_img = img.cpu().numpy().transpose(1, 2, 0)
         saliency = cv2.saliency.StaticSaliencyFineGrained_create()
         (success, saliencyMap) = saliency.computeSaliency(temp_img)
+        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
         saliencyMap = (saliencyMap * 255).astype("uint8")
-        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
 
+        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
+        print(maximum_indices)
         x = maximum_indices[0]
         y = maximum_indices[1]
 

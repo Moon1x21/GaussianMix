@@ -12,11 +12,12 @@ import argparse
 import models
 import utils
 #만약 medium이면 import trainers_max
-import trainers_max as trainers
+import trainers_rand as trainers
 import datetime
 
 
 def main():
+    print("Random")
     avaliable_modelnames = [m for m in dir(models)
                             if m[0] != '_' and type(getattr(models, m)).__name__ != 'module']
     parser = argparse.ArgumentParser(description='PyTorch RICAP Training')
@@ -42,7 +43,7 @@ def main():
                         help='postfix for saved model name')
 
     # hyperparameters
-    parser.add_argument('--epoch', '-e', type=int, default=200,
+    parser.add_argument('--epoch', '-e', type=int, default=300,
                         help='number of epochs: (default: 200 for Wide ResNet)')
     parser.add_argument('--batch', type=int, default=128,
                         help='batchsize')
