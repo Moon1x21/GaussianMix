@@ -12,7 +12,7 @@ import argparse
 import models
 import utils
 #만약 medium이면 import trainers_max
-import trainers_rand as trainers
+import trainers as trainers
 import datetime
 
 
@@ -57,7 +57,7 @@ def main():
                         help='momentum')
     parser.add_argument('--wd', type=float, default=0.0005,
                         help='weight decay: (default: 0.0005 for Wide ResNet)')
-
+    parser.add_argument('--stype',type=str,default='mid',help='saliency type: max/mid/rand, default: mid')
     # data augmentation
     parser.add_argument('--crop', type=int, default=None,
                         help='crop size')
@@ -88,12 +88,13 @@ def main():
 
     post = args.postfix + filetime 
 
-    savefilename_prefix = 'checkpoint/{model}-{depth}{params}_{dataset}{postfix}'.format(
+    savefilename_prefix = 'checkpoint/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
         model=args.model,
         depth=args.depth,
         params='-{}'.format(args.params) if args.params is not None else '',
         dataset=args.dataset,
         postfix='_{}'.format(post) if args.postfix != '' else '',
+        stype = '_{}'.format(args.stype) if args.stype != ''else '',
     )
 
     # define learning rate strategy
@@ -139,7 +140,7 @@ def main():
         num_class = 1000
     use_cuda = torch.cuda.is_available() and not args.nocuda
     trainer = trainers.make_trainer(
-        network, dataloaders, optimizer, use_cuda=use_cuda, beta_of_ricap=args.beta_of_ricap)
+        network, dataloaders, optimizer, use_cuda=use_cuda, beta_of_ricap=args.beta_of_ricap,saliency_type='mid')
 
     # initialize logs and epoch num
     if args.resume == 0:

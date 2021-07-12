@@ -125,6 +125,7 @@ class TrainerRICAP(Trainer):
             (torch.cat((cropped_images[0], cropped_images[1]), 2),
              torch.cat((cropped_images[2], cropped_images[3]), 2)),
             3)
+
         targets = (c_, W_)
         return patched_images, targets
 
@@ -158,13 +159,12 @@ class TrainerRICAP(Trainer):
         temp_img = img.cpu().numpy().transpose(1, 2, 0)
         saliency = cv2.saliency.StaticSaliencyFineGrained_create()
         (success, saliencyMap) = saliency.computeSaliency(temp_img)
-        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
         saliencyMap = (saliencyMap * 255).astype("uint8")
+        idx = self.find_nearest(saliencyMap,np.median(saliencyMap, axis=None),W,w_,H,h_)
 
-        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
-        print(maximum_indices)
-        x = maximum_indices[0]
-        y = maximum_indices[1]
+        median_indices = idx
+        x = median_indices[0]
+        y = median_indices[1]
 
         bbx1 = x 
         bby1 = y 

@@ -59,14 +59,9 @@ class Trainer(nn.Module):
             result = result.sum().item()
             sample_error5 += batchsize - result
             err5 = float(1. * sample_error5 / sample_total)
-<<<<<<< HEAD
-            progress.update(
-                bidx=batch_idx,msg='{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
-=======
 
             progress.update(batch_idx,
                 '{}, top1 loss: {:0.4f}, err:{:5.2f}% ({:5d}/{:5d}), top5 err:{:5.2f}% ({:5d}/{:5d}), lr:{}'.format(
->>>>>>> origin/master
                     'train' if train else ' test', loss, 100 * err,
                     int(sample_error), int(sample_total), 100 * err5,
                     int(sample_error5), int(sample_total), lr))
@@ -96,11 +91,19 @@ class Trainer(nn.Module):
 
 class TrainerRICAP(Trainer):
 
-    def __init__(self, network, dataloaders, optimizer, beta_of_ricap, use_cuda=False):
+    def __init__(self, network, dataloaders, optimizer, beta_of_ricap, use_cuda=False,saliency_type='mid'):
         super(TrainerRICAP, self).__init__(
             network, dataloaders, optimizer, use_cuda)
         self.beta = beta_of_ricap
+        self.saliency_type = saliency_type
 
+        self.saliency_bbox = None
+        if saliency_type == 'max':
+            self.saliency_bbox = self.saliency_bbox_max
+        elif saliency_type == 'mid':
+            self.saliency_bbox = self.saliency_bbox_mid
+        elif saliency_type == 'rand':
+            self.saliency_bbox = self.saliency_bbox_rand
     def ricap(self, images, targets):
 
         beta = self.beta  # hyperparameter
@@ -120,6 +123,7 @@ class TrainerRICAP(Trainer):
         W_ = {}
         for k in range(4):
             index = self.cuda(torch.randperm(images.size(0)))
+            
             bbx1, bby1, bbx2, bby2 = self.saliency_bbox(images[index[0]],w_[k],h_[k])
             cropped_images[k] = images[index][:,:,bbx1:bbx2,bby1:bby2]
             c_[k] = targets[index]
@@ -130,7 +134,6 @@ class TrainerRICAP(Trainer):
             (torch.cat((cropped_images[0], cropped_images[1]), 2),
              torch.cat((cropped_images[2], cropped_images[3]), 2)),
             3)
-
         targets = (c_, W_)
         return patched_images, targets
 
@@ -154,7 +157,32 @@ class TrainerRICAP(Trainer):
         idx = np.unravel_index((np.abs(array- value)).argmin(),array.shape)
         return idx
 
-    def saliency_bbox(self,img,w_,h_):
+    def saliency_bbox_max(self,img,w_,h_):
+        size = img.size()
+        W = size[1]
+        H = size[2]
+
+        # initialize OpenCV's static fine grained saliency detector and
+        # compute the saliency map
+        temp_img = img.cpu().numpy().transpose(1, 2, 0)
+        saliency = cv2.saliency.StaticSaliencyFineGrained_create()
+        (success, saliencyMap) = saliency.computeSaliency(temp_img)
+        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
+        saliencyMap = (saliencyMap * 255).astype("uint8")
+
+        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
+        print(maximum_indices)
+        x = maximum_indices[0]
+        y = maximum_indices[1]
+
+        bbx1 = x 
+        bby1 = y 
+        bbx2 = x + w_
+        bby2 = y + h_
+
+        return bbx1, bby1, bbx2, bby2
+
+    def saliency_bbox_mid(self,img,w_,h_):
         size = img.size()
         W = size[1]
         H = size[2]
@@ -177,12 +205,42 @@ class TrainerRICAP(Trainer):
         bby2 = y + h_
 
         return bbx1, bby1, bbx2, bby2
+    
+    def saliency_bbox_rand(self,img,w_,h_):
+        size = img.size()
+        W = size[1]
+        H = size[2]
+
+        # initialize OpenCV's static fine grained saliency detector and
+        # compute the saliency map
+        temp_img = img.cpu().numpy().transpose(1, 2, 0)
+        saliency = cv2.saliency.StaticSaliencyFineGrained_create()
+        (success, saliencyMap) = saliency.computeSaliency(temp_img)
+        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
+        saliencyMap = (saliencyMap * 255).astype("uint8")
+
+        maxV = np.max(saliencyMap,axis=None)
+        midV = np.median(saliencyMap, axis=None)
+
+        rV = random.randrange(int(midV),int(maxV)+1)
+        
+        idx = self.find_nearest(saliencyMap,rV,W,w_,H,h_)
+
+        random_indices = idx
+
+        x = random_indices[0]
+        y = random_indices[1]
+
+        bbx1 = x 
+        bby1 = y 
+        bbx2 = x + w_
+        bby2 = y + h_
+
+        return bbx1, bby1, bbx2, bby2
 
 
-
-
-def make_trainer(network, dataloaders, optimizer, use_cuda, beta_of_ricap=0.0):
+def make_trainer(network, dataloaders, optimizer, use_cuda, beta_of_ricap=0.0,saliency_type= 'mid'):
     if beta_of_ricap:
-        return TrainerRICAP(network, dataloaders, optimizer, beta_of_ricap, use_cuda)
+        return TrainerRICAP(network, dataloaders, optimizer, beta_of_ricap, use_cuda,saliency_type)
     else:
         return Trainer(network, dataloaders, optimizer, use_cuda)
