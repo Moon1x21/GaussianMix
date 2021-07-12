@@ -12,7 +12,7 @@ import argparse
 import models
 import utils
 #만약 medium이면 import trainers_max
-import trainers as trainers
+import trainers_fix as trainers
 import datetime
 
 
