@@ -12,7 +12,9 @@ import argparse
 import models
 import utils
 #만약 medium이면 import trainers_max
-import trainers_fix as trainers
+# import trainers as trainers
+
+import trainers_yuje as trainers
 import datetime
 
 
@@ -88,7 +90,7 @@ def main():
 
     post = args.postfix + filetime 
 
-    savefilename_prefix = 'checkpoint/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
+    savefilename_prefix = 'checkpoint/real_max/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
         model=args.model,
         depth=args.depth,
         params='-{}'.format(args.params) if args.params is not None else '',

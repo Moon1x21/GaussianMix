@@ -139,6 +139,8 @@ class TrainerRICAP(Trainer):
 
     def ricap_criterion(self, outputs, c_, W_):
         loss = sum([W_[k] * F.cross_entropy(outputs, Variable(c_[k])) for k in range(4)])
+        print(W_)
+        print(loss)
         return loss
 
     def forward_train(self, inputs, targets):

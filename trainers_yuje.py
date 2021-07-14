@@ -1,4 +1,5 @@
 import torch
+from torch._C import has_cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
@@ -94,92 +95,98 @@ class Trainer(nn.Module):
         loss_batch = F.cross_entropy(outputs, targets)
         return outputs, loss_batch
 
-
 class TrainerRICAP(Trainer):
 
-    def __init__(self, network, dataloaders, optimizer, beta_of_ricap, use_cuda=False,saliency_type='mid'):
-        super(TrainerRICAP, self).__init__(
-            network, dataloaders, optimizer, use_cuda)
+    def __init__(self, network, dataloaders, optimizer, beta_of_ricap,use_cuda=False,saliency_type='mid'):
+        super(TrainerRICAP,self).__init__(
+            network,dataloaders,optimizer,use_cuda)
         self.beta = beta_of_ricap
         self.saliency_type = saliency_type
-
         self.saliency_bbox = None
-        if saliency_type == 'max':
-            self.saliency_bbox = self.saliency_bbox_max
-        elif saliency_type == 'mid':
-            self.saliency_bbox = self.saliency_bbox_mid
-        elif saliency_type == 'rand':
-            self.saliency_bbox = self.saliency_bbox_rand
+        # if saliency_type == 'max':
+        #     self.saliency_bbox = self.saliency_bbox_max
+        # elif saliency_type == 'mid':
+        #     self.saliency_bbox = self.saliency_bbox_mid
+        # elif saliency_type == 'rand':
+        #     self.saliency_bbox = self.saliency_bbox_rand
+
     def ricap(self, images, targets):
 
-        beta = self.beta  # hyperparameter
+        beta = self.beta
 
-        # size of image
-        I_x, I_y = images.size()[2:]
+        I_x, I_y=images.size()[2:]
+        while(True):
+            w = int(np.round(I_x * np.random.beta(beta, beta)))
+            h = int(np.round(I_y * np.random.beta(beta, beta)))
 
-        # generate boundary position (w, h)
-        w = int(np.round(I_x * np.random.beta(beta, beta)))
-        h = int(np.round(I_y * np.random.beta(beta, beta)))
-        # w_ = [w, I_x - w, w, I_x - w]
-        # h_ = [h, h, I_y - h, I_y - h]
-        w_ = [16,16,16,16]
-        h_ = [16,16,16,16]
-        # select four images
-        cropped_images = [[],[],[],[]]
-        patched_images = []
-        # patched_images = {}
-        c_ = {0:[],1:[],2:[],3:[]}
-        W_ = {0:[],1:[],2:[],3:[]}
-        wsum = 0
-        stype = ['mid','max','rand']
-        for k in range(4):
-            index = self.cuda(torch.randperm(images.size(0)))
-            for i in index:
-
-                bbx1,bby1,bbx2,bby2,wv = self.saliency_bbox_rand(images[i],w_[k],h_[k])
-                W_[k].append(wv)
-    
-                cropped_images[k].append(images[i][:,bbx1:bbx2,bby1:bby2])
+            # 각 이미지의 크기
+            w_ = [w, I_x - w, w, I_x - w]
+            h_ = [h, h, I_y - h, I_y - h]
+            flag = True
+            for i in range(4):
+                if w_[i] <2:
+                    flag=False
+                    break
+                if h_[i]<2:
+                    flag = False
+                    break
+            if flag:
+                break
                 
-                c_[k].append(targets[i])
-        for i_d in range(images.size(0)):
 
-            patched_images.append(torch.cat(
-                    (torch.cat((cropped_images[0][i_d], cropped_images[1][i_d]), 1),
-                    torch.cat((cropped_images[2][i_d], cropped_images[3][i_d]), 1)),
-                    2))
-        # print(patched_images.size)
-        # patched_images = (patched_images)
-        # patched_images = np.array(patched_images)
+        cropped_images = {}
+        c_ = {0:[],1:[],2:[],3:[]}
+        W_ = {}
+        for k in range(4):
+            # W_[k]=torch.tensor(((w_[k]*h_[k])/(I_x*I_y))).cuda()
+            W_[k] = ((w_[k]*h_[k])/(I_x*I_y))
+        patched_images_box = [] 
+        for i in range(images.size(0)):
+            cropped_image = {}
+            index = random.sample(range(images.size(0)),4)
+            for k in range(4):
+                bbx1,bby1,bbx2,bby2 = self.saliency_bbox_rand(images[index[k]],w_[k],h_[k])
+                # print(bbx1,bby1,bbx2,bby2)
+                cropped_image[k] = images[index[k]][:,bbx1:bbx2,bby1:bby2]
 
-        patched_images = [t.cpu().numpy() for t in patched_images]            
-        
-        patched_images = torch.Tensor(patched_images).cuda()
-        targets = (c_, W_)
+                c_[k].append(targets[index[k]])
+
+            patched_image = torch.cat(
+                (torch.cat((cropped_image[0],cropped_image[1]),1),
+                torch.cat((cropped_image[2],cropped_image[3]),1)),
+                2)
+            patched_images_box.append(patched_image)
+        patched_images = torch.stack(patched_images_box,dim=0).cuda()
+        # print(patched_images.shape)
+        #c_처리
+        # for k in range(4):
+        #     c_[k] = torch.stack(c_[k]).cuda()
+        #     W_[k] = torch.stack(W_[k]).cuda()
+        for k in range(4):
+            for j in range(len(c_[k])):
+                c_[k][j] = c_[k][j].cpu().numpy()
+            c_[k]=np.array(c_[k])
+        targets = (c_,W_)
         # print(targets)
-        
         return patched_images, targets
 
     def ricap_criterion(self, outputs, c_, W_):
         # print(outputs.shape)
-        # print(outputs[0].shape,c_[0][0].shape)
         # print(len(c_[0]))
-        # print(len(W_[0]))
-        # print(type(c_[0][0]))
-        # print((c_[0][0]))
-        # print(outputs[0].unsqueeze(0).shape, ((c_[0][0]).unsqueeze(-1)).shape)
-        loss = 0
-        for i in range(outputs.shape[0]):
-            loss += sum([W_[k][i] * F.cross_entropy(outputs[i].unsqueeze(0), Variable((c_[k][i]).unsqueeze(0))) for k in range(4)])
+        # print(outputs[0].shape,c_[0][0].shape)
+        # loss = 0
+        # for i in range(outputs.size(0)):
+        # for k in range(4):
+        #     calc = torch.cuda.LongTensor(W_[k] *c_[k])
+        loss = sum([W_[k] * F.cross_entropy(outputs, Variable(torch.cuda.LongTensor(c_[k]))) for k in range(4)])
+        # print(loss)
         return loss
-
+    
     def forward_train(self, inputs, targets):
         self.optimizer.zero_grad()
         inputs, targets = self.cuda(inputs), self.cuda(targets)
         inputs, (c_, W_) = self.ricap(inputs, targets)
-        if not os.path.isfile('/root/volume/SICAP/checkpoint/testImage.jpg'):
-            torchvision.utils.save_image(inputs[0],'/root/volume/SICAP/checkpoint/testImage.jpg')
-
+        # print(inputs.shape)
         inputs = Variable(inputs)
         outputs = self.network(inputs)
         loss_batch = self.ricap_criterion(outputs, c_, W_)
@@ -191,60 +198,12 @@ class TrainerRICAP(Trainer):
         array = array[:W-w_+1,:H-h_+1]
         idx = np.unravel_index((np.abs(array- value)).argmin(),array.shape)
         return idx
+                
+    # def find_nearest(self,array,value):
+    #     idx = np.unravel_index((np.abs(array-value)).argmin(),array.shape)
+    #     return idx                
 
-    def saliency_bbox_max(self,img,w_,h_):
-        size = img.size()
-        W = size[1]
-        H = size[2]
 
-        # initialize OpenCV's static fine grained saliency detector and
-        # compute the saliency map
-        temp_img = img.cpu().numpy().transpose(1, 2, 0)
-        saliency = cv2.saliency.StaticSaliencyFineGrained_create()
-        (success, saliencyMap) = saliency.computeSaliency(temp_img)
-        saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
-        saliencyMap = (saliencyMap * 255).astype("uint8")
-
-        maximum_indices = np.unravel_index(np.argmax(saliencyMap, axis=None),saliencyMap.shape)
-        # print(maximum_indices)
-        x = maximum_indices[0]
-        y = maximum_indices[1]
-
-        bbx1 = x 
-        bby1 = y 
-        bbx2 = x + w_
-        bby2 = y + h_
-
-        return bbx1, bby1, bbx2, bby2
-
-    def saliency_bbox_mid(self,img,w_,h_):
-        size = img.size()
-        W = size[1]
-        H = size[2]
-
-        # initialize OpenCV's static fine grained saliency detector and
-        # compute the saliency map
-        temp_img = img.cpu().numpy().transpose(1, 2, 0)
-        saliency = cv2.saliency.StaticSaliencyFineGrained_create()
-        (success, saliencyMap) = saliency.computeSaliency(temp_img)
-        saliencyMap = (saliencyMap * 255).astype("uint8")
-
-        maxV = np.max(saliencyMap,axis=None)
-        midV = np.median(saliencyMap, axis=None)
-
-        idx = self.find_nearest(saliencyMap,midV,W,w_,H,h_)
-
-        median_indices = idx
-        x = median_indices[0]
-        y = median_indices[1]
-
-        bbx1 = x 
-        bby1 = y 
-        bbx2 = x + w_
-        bby2 = y + h_
-
-        return bbx1, bby1, bbx2, bby2,round(midV/maxV)
-    
     def saliency_bbox_rand(self,img,w_,h_):
         size = img.size()
         W = size[1]
@@ -257,12 +216,12 @@ class TrainerRICAP(Trainer):
         (success, saliencyMap) = saliency.computeSaliency(temp_img)
         saliencyMap = saliencyMap[:W-w_+1,:H-h_+1]
         saliencyMap = (saliencyMap * 255).astype("uint8")
-        # print(saliencyMap)
+
         maxV = np.max(saliencyMap,axis=None)
-        # midV = np.median(saliencyMap, axis=None)
-        midV = 0
+        midV = np.median(saliencyMap, axis=None)
+
         rV = random.randrange(int(midV),int(maxV)+1)
-        # print(rV)
+        
         idx = self.find_nearest(saliencyMap,rV,W,w_,H,h_)
 
         random_indices = idx
@@ -275,8 +234,7 @@ class TrainerRICAP(Trainer):
         bbx2 = x + w_
         bby2 = y + h_
 
-        return bbx1, bby1, bbx2, bby2,round((rV/maxV),4)
-
+        return bbx1, bby1, bbx2, bby2
 
 def make_trainer(network, dataloaders, optimizer, use_cuda, beta_of_ricap=0.0,saliency_type= 'mid'):
     if beta_of_ricap:
