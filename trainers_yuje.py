@@ -115,23 +115,12 @@ class TrainerRICAP(Trainer):
         beta = self.beta
 
         I_x, I_y=images.size()[2:]
-        while(True):
-            w = int(np.round(I_x * np.random.beta(beta, beta)))
-            h = int(np.round(I_y * np.random.beta(beta, beta)))
+        w = int(np.round(I_x * np.random.beta(beta, beta)))
+        h = int(np.round(I_y * np.random.beta(beta, beta)))
 
-            # 각 이미지의 크기
-            w_ = [w, I_x - w, w, I_x - w]
-            h_ = [h, h, I_y - h, I_y - h]
-            flag = True
-            for i in range(4):
-                if w_[i] <2:
-                    flag=False
-                    break
-                if h_[i]<2:
-                    flag = False
-                    break
-            if flag:
-                break
+        # 각 이미지의 크기
+        w_ = [w, I_x - w, w, I_x - w]
+        h_ = [h, h, I_y - h, I_y - h]
                 
 
         cropped_images = {}
@@ -186,6 +175,9 @@ class TrainerRICAP(Trainer):
         self.optimizer.zero_grad()
         inputs, targets = self.cuda(inputs), self.cuda(targets)
         inputs, (c_, W_) = self.ricap(inputs, targets)
+        # for i in range(20):
+        #     if not os.path.isfile('/root/volume/SICAP/checkpoint/testImage'+str(i)+'.jpg'):
+        #         torchvision.utils.save_image(inputs[i],'/root/volume/SICAP/checkpoint/testImage'+str(i)+'.jpg')
         # print(inputs.shape)
         inputs = Variable(inputs)
         outputs = self.network(inputs)
