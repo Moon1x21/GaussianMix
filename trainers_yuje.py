@@ -129,17 +129,25 @@ class TrainerRICAP(Trainer):
         for k in range(4):
             # W_[k]=torch.tensor(((w_[k]*h_[k])/(I_x*I_y))).cuda()
             W_[k] = ((w_[k]*h_[k])/(I_x*I_y))
-        patched_images_box = [] 
+
+        patched_images_box = []
+        box = []
+        for p in range(4):
+            box.append(self.cuda(torch.randperm(images.size(0))))
+        index= [0,0,0,0]
         for i in range(images.size(0)):
             cropped_image = {}
-            index = random.sample(range(images.size(0)),4)
+            
+            for ik in range(4):
+                index[ik] = box[ik][i]
+
             for k in range(4):
                 bbx1,bby1,bbx2,bby2 = self.saliency_bbox_rand(images[index[k]],w_[k],h_[k])
                 # print(bbx1,bby1,bbx2,bby2)
                 cropped_image[k] = images[index[k]][:,bbx1:bbx2,bby1:bby2]
 
                 c_[k].append(targets[index[k]])
-
+                
             patched_image = torch.cat(
                 (torch.cat((cropped_image[0],cropped_image[1]),1),
                 torch.cat((cropped_image[2],cropped_image[3]),1)),

@@ -14,7 +14,7 @@ import utils
 #만약 medium이면 import trainers_max
 # import trainers as trainers
 
-import trainers_yuje as trainers
+import trainers_yuje_kk as trainers
 import datetime
 
 
@@ -45,7 +45,7 @@ def main():
                         help='postfix for saved model name')
 
     # hyperparameters
-    parser.add_argument('--epoch', '-e', type=int, default=300,
+    parser.add_argument('--epoch', '-e', type=int, default=200,
                         help='number of epochs: (default: 200 for Wide ResNet)')
     parser.add_argument('--batch', type=int, default=128,
                         help='batchsize')
@@ -87,10 +87,10 @@ def main():
     filetime = datetime.datetime.today()
     filetime = str(filetime).split(' ')
     filetime = filetime[0]+'_'+filetime[1]
-
+    print(filetime)
     post = args.postfix + filetime 
 
-    savefilename_prefix = 'checkpoint/real_max/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
+    savefilename_prefix = 'checkpoint/real_rand/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
         model=args.model,
         depth=args.depth,
         params='-{}'.format(args.params) if args.params is not None else '',
