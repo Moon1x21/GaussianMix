@@ -100,7 +100,7 @@ class TrainerRICAP(Trainer):
     def __init__(self, network, dataloaders, optimizer, beta_of_ricap,use_cuda=False,saliency_type='mid'):
         super(TrainerRICAP,self).__init__(
             network,dataloaders,optimizer,use_cuda)
-        self.beta = 1
+        self.beta = beta_of_ricap
         self.saliency_type = saliency_type
         self.saliency_bbox = None
         # if saliency_type == 'max':
@@ -117,7 +117,7 @@ class TrainerRICAP(Trainer):
         I_x, I_y=images.size()[2:]
         w = int(np.round(I_x * np.random.beta(beta, beta)))
         h = int(np.round(I_y * np.random.beta(beta, beta)))
-        # w,h = 16,16
+
         # 각 이미지의 크기
         w_ = [w, I_x - w, w, I_x - w]
         h_ = [h, h, I_y - h, I_y - h]
@@ -125,8 +125,10 @@ class TrainerRICAP(Trainer):
 
         cropped_images = {}
         c_ = {0:[],1:[],2:[],3:[]}
-        W_ = {0:[],1:[],2:[],3:[]}
-
+        W_ = {}
+        for k in range(4):
+            # W_[k]=torch.tensor(((w_[k]*h_[k])/(I_x*I_y))).cuda()
+            W_[k] = ((w_[k]*h_[k])/(I_x*I_y))
 
         patched_images_box = []
         box = []
@@ -134,29 +136,23 @@ class TrainerRICAP(Trainer):
             box.append(self.cuda(torch.randperm(images.size(0))))
         index= [0,0,0,0]
         for i in range(images.size(0)):
-            for k in range(4):
-                # W_[k]=torch.tensor(((w_[k]*h_[k])/(I_x*I_y))).cuda()
-                W_[k].append((w_[k]*h_[k])/(I_x*I_y))
             cropped_image = {}
             
             for ik in range(4):
                 index[ik] = box[ik][i]
-            wsum =0
-            sw = {}
+
             for k in range(4):
-                bbx1,bby1,bbx2,bby2,wv = self.saliency_bbox_rand(images[index[k]],w_[k],h_[k])
+                r = random.random()
+                if r>0.5:
+                    bbx1,bby1,bbx2,bby2 = self.saliency_bbox_rand(images[index[k]],w_[k],h_[k])
                 # print(bbx1,bby1,bbx2,bby2)
-                cropped_image[k] = images[index[k]][:,bbx1:bbx2,bby1:bby2]
-
+                    cropped_image[k] = images[index[k]][:,bbx1:bbx2,bby1:bby2]
+                else:
+                    x_k = np.random.randint(0, I_x - w_[k] + 1)
+                    y_k = np.random.randint(0, I_y - h_[k] + 1)
+                    cropped_image[k] = images[index[k]][:, x_k:x_k + w_[k], y_k:y_k + h_[k]]
                 c_[k].append(targets[index[k]])
-                sw[k] = wv
-                wsum += wv
-            print((sw.values()))
-            for k in range(4):
-                sw[k]=round(1.+sw[k]/wsum,4)
-                # print(k)//
-                W_[k][i]=W_[k][i]*sw[k]
-
+                
             patched_image = torch.cat(
                 (torch.cat((cropped_image[0],cropped_image[1]),1),
                 torch.cat((cropped_image[2],cropped_image[3]),1)),
@@ -172,7 +168,6 @@ class TrainerRICAP(Trainer):
             for j in range(len(c_[k])):
                 c_[k][j] = c_[k][j].cpu().numpy()
             c_[k]=np.array(c_[k])
-            W_[k]=np.array(W_[k])
         targets = (c_,W_)
         # print(targets)
         return patched_images, targets
@@ -185,13 +180,7 @@ class TrainerRICAP(Trainer):
         # for i in range(outputs.size(0)):
         # for k in range(4):
         #     calc = torch.cuda.LongTensor(W_[k] *c_[k])
-        # print(outputs[0].unsqueeze(0).shape)
-        # print(torch.cuda.LongTensor(c_[0])[0].unsqueeze(0).shape)
-        loss = 0
-        for i in range(outputs.size(0)):
-            # /for k in range(4):
-                # print(W_[k][i])
-            loss += sum([W_[k][i] * F.cross_entropy(outputs[i].unsqueeze(0), Variable(torch.cuda.LongTensor(c_[k])[i].unsqueeze(0))) for k in range(4)])
+        loss = sum([W_[k] * F.cross_entropy(outputs, Variable(torch.cuda.LongTensor(c_[k]))) for k in range(4)])
         # print(loss)
         return loss
     
@@ -250,9 +239,7 @@ class TrainerRICAP(Trainer):
         bbx2 = x + w_
         bby2 = y + h_
 
-        wv =round(float((rV/maxV)),4)
-        # print(wv)
-        return bbx1, bby1, bbx2, bby2, wv
+        return bbx1, bby1, bbx2, bby2
 
 def make_trainer(network, dataloaders, optimizer, use_cuda, beta_of_ricap=0.0,saliency_type= 'mid'):
     if beta_of_ricap:

@@ -14,7 +14,7 @@ import utils
 #만약 medium이면 import trainers_max
 # import trainers as trainers
 
-import trainers_yuje_kk as trainers
+import trainers_yuje_aa as trainers
 import datetime
 
 
@@ -90,7 +90,7 @@ def main():
     print(filetime)
     post = args.postfix + filetime 
 
-    savefilename_prefix = 'checkpoint/real_rand/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
+    savefilename_prefix = 'checkpoint/aa/{model}-{depth}{params}_{dataset}{postfix}_{stype}'.format(
         model=args.model,
         depth=args.depth,
         params='-{}'.format(args.params) if args.params is not None else '',
