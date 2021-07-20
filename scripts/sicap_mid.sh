@@ -5,4 +5,4 @@ apt-get install -y libglib2.0-0
 pip install opencv-contrib-python
 
 cd /root/volume/SICAP
-python main.py --dataset cifar10 --model WideResNetDropout --depth 28 --params 10 --beta_of_ricap 0.3 --postfix ricap0.3
+python main_fix.py --dataset cifar10 --model WideResNetDropout --depth 28 --params 10 --beta_of_ricap 5.0 --postfix beta5.0
