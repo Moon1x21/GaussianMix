@@ -1,7 +1,5 @@
 
-# RICAP: Data Augmentation using Random Image Cropping and Patching for Deep CNNs
-
-PyTorch implementation of data augmentation method RICAP for deep CNNs proposed by "[Data Augmentation using Random Image Cropping and Patching for Deep CNNs](https://arxiv.org/abs/1811.09030)."
+# SICAP: Data Augmentation using Random Image Cropping with Saliency map and Patching for Deep CNNs
 
 ## Prerequisites
 
@@ -21,16 +19,15 @@ PyTorch implementation of data augmentation method RICAP for deep CNNs proposed 
 |                         |        CIFAR-10        |        CIFAR-100        |
 |:------------------------|:----------------------:|:-----------------------:|
 | WideResNet28-10         |          3.89          |          18.85          |
-| WideResNet28-10 + RICAP | **2.85** &plusmn; 0.06 | **17.22** &plusmn; 0.20 |
+| WideResNet28-10 + CUTMIX|                    |                    |
+| WideResNet28-10 + SICAP | **** &plusmn; 0.06 | **** &plusmn; 0.20 |
 
 ### ImageNet
 
 |                        | Epochs |   top-1   |  top-5   |
 |:-----------------------|:------:|:---------:|:--------:|
-| WideResNet50-2         |  100   |   21.90   |   6.03   |
-| WideResNet50-2 + RICAP |  100   |   21.08   |   5.66   |
 | WideResNet50-2         |  200   |   21.84   |   6.03   |
-| WideResNet50-2 + RICAP |  200   | **20.33** | **5.26** |
+| WideResNet50-2 + SICAP |  200   | **20.33** | **5.26** |
 
 * Details are in our [paper](https://arxiv.org/abs/1811.09030).
 
@@ -40,13 +37,13 @@ Our script occupies all available GPUs. Please set environment `CUDA_VISIBLE_DEV
 
 ### CIFAR-10 and WideResNet28-10
 
-with RICAP
+with SICAP
 
 ```bash
-python main.py --dataset cifar10 --model WideResNetDropout --depth 28 --params 10 --beta_of_ricap 0.3 --postfix ricap0.3
+python main.py --dataset cifar10 --model WideResNetDropout --depth 28 --params 10 --beta_of_sicap 1.0 --postfix sicap1.0
 ```
 
-without RICAP
+without SICAP
 
 ```bash
 python main.py --dataset cifar10 --model WideResNetDropout --depth 28 --params 10
@@ -56,13 +53,13 @@ We trained these models on a single GPU (GeForce GTX 1080).
 
 ### CIFAR-100 and WideResNet28-10
 
-with RICAP
+with SICAP
 
 ```bash
-python main.py --dataset cifar100 --model WideResNetDropout --depth 28 --params 10 --beta_of_ricap 0.3 --postfix ricap0.3
+python main.py --dataset cifar100 --model WideResNetDropout --depth 28 --params 10 --beta_of_sicap 0.3 --postfix SICAP1.0
 ```
 
-without RICAP
+without SICAP
 
 ```bash
 python main.py --dataset cifar100 --model WideResNetDropout --depth 28 --params 10
@@ -73,13 +70,13 @@ We trained these models on a single GPU (GeForce GTX 1080).
 
 ### ImageNet and WideResNetBottleneck50-2 for 100 epochs
 
-with RICAP
+with SICAP
 
 ```bash
 python main.py --dataset ImageNet --dataroot [your imagenet folder path(like ./imagenet)] --model WideResNetBottleneck --depth 50 --epoch 100 --adlr 30,60,90 --droplr 0.1 --wd 1e-4 --batch 256 --params 2 --beta_of_ricap 0.3 --postfix ricap0.3
 ```
 
-without RICAP
+without SICAP
 
 ```bash
 python main.py --dataset ImageNet --dataroot [your imagenet folder path(like ./imagenet)] --model WideResNetBottleneck --depth 50 --epoch 100 --adlr 30,60,90 --droplr 0.1 --wd 1e-4 --batch 256 --params 2
