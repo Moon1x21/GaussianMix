@@ -12,6 +12,7 @@ import argparse
 import sys
 sys.path.append('/root/volume/SICAP')
 import models
+from models.resnet import ResNet18, ResNet50, ResNet101
 import utils
 #만약 medium이면 import trainers_max
 # import trainers as trainers
@@ -20,10 +21,13 @@ import trainers as trainers
 import datetime
 
 
+
+
+
 def main():
     print("Random")
     avaliable_modelnames = [m for m in dir(models)
-                            if m[0] != '_' and type(getattr(models, m)).__name__ != 'module']
+                            if m[0] != '_' and type(getattr(models, m)).__name__ != 'module'].extend(['ResNet18','ResNet50','ResNet101'])
     parser = argparse.ArgumentParser(description='PyTorch RICAP Training')
 
     # hardware
@@ -102,6 +106,18 @@ def main():
     )
 
     # define learning rate strategy
+    if args.dataset == 'cifar10':
+        num_classes = 10
+    elif args.dataset == 'cifar100':
+        num_classes = 100
+    
+    if args.model == 'ResNet18':
+        cnn = ResNet18(num_classes=num_classes)
+    elif args.model == 'ResNet50':
+        cnn = ResNet50(num_classes=num_classes)
+    elif args.model == 'ResNet101':
+        cnn = ResNet101(num_classes=num_classes)
+
     if args.adlr is None:
         args.adlr = np.array([60, 120, 160])
     else:
@@ -113,7 +129,10 @@ def main():
     print('==> Building model..')
     if not os.path.isdir('checkpoint'):
         os.mkdir('checkpoint')
-    network = getattr(models, args.model)(args.dataset, args.depth, args.params)
+    if args.model in ['ResNet18','ResNet50','ResNet101']:
+        network = getattr(models.resnet,args.model)(num_classes)
+    else:
+        network = getattr(models, args.model)(args.dataset, args.depth, args.params)
     optimizer = optim.SGD(network.parameters(),
                           lr=lr_current, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
 
