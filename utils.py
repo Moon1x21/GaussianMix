@@ -50,7 +50,7 @@ def get_dataloaders(datasetname, dataroot, batchsize, num_workers,
             std = (68.2 / 255, 65.4 / 255, 70.4 / 255)
 
         transform_train = transforms.Compose([
-            transforms.RandomCrop(cropsize or 32, padding=4),
+            transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
