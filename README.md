@@ -12,25 +12,6 @@
 * CIFAR-10/100: automatically downloaded by PyTorch scripts to `data` folder
 * ImageNet: manually downloaded from [ImageNet](http://www.image-net.org/) (ILSVRC2012 version) and moved to `train` and `val` folders in your `dataroot` path (e.g., `./imagenet/`)
 
-## Results
-
-### CIFAR
-
-|                         |        CIFAR-10        |        CIFAR-100        |
-|:------------------------|:----------------------:|:-----------------------:|
-| WideResNet28-10         |          3.89          |          18.85          |
-| WideResNet28-10 + CUTMIX|                    |                    |
-| WideResNet28-10 + SICAP | **** &plusmn; 0.06 | **** &plusmn; 0.20 |
-
-### ImageNet
-
-|                        | Epochs |   top-1   |  top-5   |
-|:-----------------------|:------:|:---------:|:--------:|
-| WideResNet50-2         |  200   |   21.84   |   6.03   |
-| WideResNet50-2 + SICAP |  200   | **20.33** | **5.26** |
-
-* Details are in our [paper](https://arxiv.org/abs/1811.09030).
-
 ## How to Train
 
 Our script occupies all available GPUs. Please set environment `CUDA_VISIBLE_DEVICES`.
@@ -80,28 +61,4 @@ without SICAP
 
 ```bash
 python main.py --dataset ImageNet --dataroot [your imagenet folder path(like ./imagenet)] --model WideResNetBottleneck --depth 50 --epoch 100 --adlr 30,60,90 --droplr 0.1 --wd 1e-4 --batch 256 --params 2
-```
-
-We trained these models on four GPUs (GeForce GTX 1080).
-
-## References
-
-```bibtex
-@inproceedings{RICAP2018ACML,
-  title = {RICAP: Random Image Cropping and Patching Data Augmentation for Deep CNNs},
-  author = {Takahashi, Ryo and Matsubara, Takashi and Uehara, Kuniaki},
-  booktitle = {Asian Conference on Machine Learning (ACML)},
-  url={http://proceedings.mlr.press/v95/takahashi18a.html},
-  year = {2018}
-}
-```
-
-```bibtex
-@article{RICAP2018arXiv,
-  title={Data Augmentation using Random Image Cropping and Patching for Deep CNNs},
-  author={Takahashi, Ryo and Matsubara, Takashi and Uehara, Kuniaki},
-  journal={arXiv},
-  url={https://arxiv.org/abs/1811.09030},
-  year={2018}
-}
 ```
