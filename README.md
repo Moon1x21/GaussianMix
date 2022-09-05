@@ -1,5 +1,5 @@
 
-# SICAP: Data Augmentation using Random Image Cropping with Saliency map and Patching for Deep CNNs
+# GaussianMix: Data Augmentation focusing the structure of the Convolution Network
 
 ## Prerequisites
 
